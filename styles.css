@@ -10,8 +10,8 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; }
-button, input, select { font: inherit; }
-button, input, select { min-height: 44px; min-width: 44px; }
+button, input, select, textarea { font: inherit; }
+button, input, select, textarea { min-height: 44px; min-width: 44px; }
 button { cursor: pointer; }
 .app { max-width: 1120px; margin: 0 auto; padding: 48px 24px 64px; }
 .page-header { margin-bottom: 32px; }
@@ -22,9 +22,9 @@ h2 { margin: 0; font-size: 20px; }
 .card { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 28px; margin-bottom: 24px; box-shadow: 0 4px 18px #22332d04; }
 .details-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; margin-top: 24px; }
 label { display: flex; flex-direction: column; gap: 8px; font-size: 14px; font-weight: 600; min-width: 0; }
-input, select { width: 100%; border: 1px solid #cbd7cf; border-radius: 8px; background: white; color: #22332d; padding: 11px 12px; font-size: 16px; font-weight: 400; }
+input, select, textarea { width: 100%; border: 1px solid #cbd7cf; border-radius: 8px; background: white; color: #22332d; padding: 11px 12px; font-size: 16px; font-weight: 400; }
 input::placeholder { color: #79867f; opacity: 1; }
-input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
 .muted, .keyboard-hint { color: #607068; font-size: 13px; }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -56,8 +56,14 @@ th:last-child, td:last-child { padding-right: 0; }
 #total { color: var(--accent); font-size: clamp(28px, 4vw, 38px); font-weight: 750; letter-spacing: -.03em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; min-width: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .mobile-only { display: none; }
+.print-only, .print-value { display: none; }
+.comment-card { margin-top: 24px; }
+.comment-label { margin: 20px 0 8px; }
+textarea { display: block; resize: vertical; line-height: 1.5; }
+.save-button { border: 1px solid var(--accent); border-radius: 8px; padding: 12px 22px; background: var(--accent); color: white; font-weight: 650; }
+.save-button:hover { background: #105d40; }
 
-@media (min-width: 641px) and (max-width: 850px) {
+@media screen and (min-width: 641px) and (max-width: 850px) {
   .app { padding-right: 16px; padding-left: 16px; }
   .card { padding: 20px 16px; }
   td { padding-right: 4px; padding-left: 4px; }
@@ -67,7 +73,7 @@ th:last-child, td:last-child { padding-right: 0; }
   th:nth-child(3) { width: 15%; }
 }
 
-@media (max-width: 640px) {
+@media screen and (max-width: 640px) {
   .app { padding: 28px 16px 40px; }
   .page-header { margin-bottom: 24px; }
   .card { padding: 20px; border-radius: 12px; }
@@ -88,4 +94,44 @@ th:last-child, td:last-child { padding-right: 0; }
   .keyboard-hint { line-height: 1.5; }
   .total-card { padding: 24px 20px; align-items: flex-start; flex-direction: column; gap: 12px; }
   .final-total { flex-direction: column; gap: 12px; }
+  .save-button { width: 100%; }
+}
+
+@page { size: A4 portrait; margin: 15mm; }
+
+@media print {
+  :root, body { background: white; color: black; }
+  body { font-size: 11pt; line-height: 1.4; }
+  .app { max-width: none; margin: 0; padding: 0; }
+  .page-header, button, .add-area, .print-actions, .calculation-settings,
+  #currency-hint, .delete-cell, th:last-child, .muted, .comment-label,
+  .mobile-only, input, select, textarea { display: none !important; }
+  .print-only { display: block; }
+  #print-heading { margin: 0 0 7mm; font-size: 20pt; letter-spacing: normal; overflow-wrap: anywhere; }
+  .card { padding: 0; margin: 0 0 6mm; border: 0; border-radius: 0; box-shadow: none; }
+  h2 { font-size: 13pt; break-after: avoid; }
+  .details-grid { margin-top: 3mm; gap: 3mm 8mm; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  label { font-size: 10pt; gap: 1mm; break-inside: avoid; }
+  .print-value { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11pt; font-weight: 400; min-height: 1em; }
+  .section-heading { margin-bottom: 3mm; }
+  table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
+  th, td, th:first-child, td:first-child { border: 1px solid #777; padding: 2.5mm; color: black; vertical-align: top; }
+  th { font-size: 10pt; }
+  th:first-child { width: 35%; }
+  th:nth-child(2) { width: 15%; }
+  th:nth-child(3) { width: 13%; }
+  th:nth-child(4) { width: 18%; }
+  th:nth-child(5) { width: 19%; }
+  td .sr-only { display: none; }
+  td:nth-child(2), td:nth-child(4) { text-align: right; }
+  .total-card { width: 90mm; max-width: 100%; margin: 4mm 0 6mm auto; padding: 0; gap: 2mm; background: white; border: 0; border-radius: 0; break-inside: avoid; }
+  .summary-row { gap: 5mm; }
+  .final-total { border-color: #777; padding-top: 3mm; }
+  .total-card h2 { font-size: 12pt; }
+  #total { color: black; font-size: 16pt; letter-spacing: normal; }
+  .comment-card { margin-top: 0; }
+  .comment-card .print-value { margin-top: 3mm; }
+  .signature { margin: 8mm 0 0; break-inside: avoid; }
 }

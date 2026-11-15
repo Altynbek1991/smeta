@@ -9,6 +9,7 @@
 </head>
 <body>
   <main class="app">
+    <h1 id="print-heading" class="print-only"></h1>
     <header class="page-header">
       <span class="eyebrow">ПРОСТОЙ РАСЧЁТ</span>
       <h1>Смета за 5 минут</h1>
@@ -56,6 +57,17 @@
       <div class="summary-row" id="vat-row" hidden><span>НДС</span><output id="vat-amount">0 ₸</output></div>
       <div class="summary-row final-total"><h2 id="total-heading">Итого к оплате</h2><output id="total">0 ₸</output></div>
     </section>
+
+    <section class="card comment-card" aria-labelledby="comment-heading">
+      <h2 id="comment-heading">Комментарий</h2>
+      <label for="comment" class="comment-label">Сроки, условия оплаты</label>
+      <textarea id="comment" name="comment" rows="4" placeholder="Например, срок выполнения — 5 рабочих дней, предоплата — 50%"></textarea>
+    </section>
+    <p class="print-only signature">Подпись ____________________</p>
+    <div class="print-actions">
+      <button type="button" id="save-pdf" class="save-button">Сохранить PDF</button>
+      <p class="keyboard-hint">В окне печати выберите «Сохранить как PDF».</p>
+    </div>
   </main>
 
   <template id="item-template">

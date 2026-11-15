@@ -89,3 +89,31 @@ document.querySelector("#estimate-date").value = [
   String(today.getDate()).padStart(2, "0"),
 ].join("-");
 addItem(false);
+
+function preparePrint() {
+  recalculate();
+  // Текстовые копии переносят длинные значения, не меняя поля на экране.
+  document.querySelectorAll(".print-value").forEach((value) => value.remove());
+  document.querySelectorAll(".details-grid input, #items input, #items select, #comment").forEach((field) => {
+    const value = document.createElement("span");
+    value.className = "print-value";
+    if (field.matches('[data-field="quantity"], [data-field="price"]')) {
+      value.textContent = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 20 })
+        .format(parseNumber(field.value)).replace(/[\u00a0\u202f]/g, " ");
+    } else if (field.type === "date" && field.value) {
+      value.textContent = field.value.split("-").reverse().join(".");
+    } else {
+      value.textContent = field.value;
+    }
+    field.after(value);
+  });
+  const number = document.querySelector('[name="estimate-number"]').value.trim() || "____";
+  const date = document.querySelector("#estimate-date").value;
+  document.querySelector("#print-heading").textContent = `Смета № ${number} от ${date ? date.split("-").reverse().join(".") : "____"}`;
+}
+
+window.addEventListener("beforeprint", preparePrint);
+document.querySelector("#save-pdf").addEventListener("click", () => {
+  preparePrint();
+  window.print();
+});
