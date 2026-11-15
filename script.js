@@ -6,6 +6,7 @@ const totalOutput = document.querySelector("#total");
 const discountInput = document.querySelector("#discount");
 const vatInput = document.querySelector("#vat");
 const currencyInput = document.querySelector("#currency");
+const commentCurrencyInput = document.querySelector("#comment-currency");
 const draftKey = "smeta-draft-v1";
 const draftFields = {
   sender: document.querySelector('[name="sender"]'),
@@ -20,6 +21,10 @@ const draftFields = {
 let draftReady = false;
 let copyTimer;
 let discountMode = "percent";
+let commentCurrencyBase = null;
+let referenceRates = null;
+let referenceDate = null;
+let referenceRequest = null;
 let validationId = 0;
 const digitSelector = '[name="estimate-number"], [data-field="quantity"], [data-field="price"], #discount, #vat';
 
@@ -100,6 +105,22 @@ function updateDiscountMode() {
   discountInput.setAttribute("aria-label", `Скидка, ${fixed ? currencyInput.value : "%"}`);
 }
 
+function updateCommentCurrencies() {
+  const base = currencyInput.value;
+  const available = ["₸", "₽", "$", "€"].filter((currency) => currency !== base);
+  const previous = commentCurrencyInput.value;
+  if (commentCurrencyBase !== base) {
+    commentCurrencyInput.replaceChildren(...available.map((currency) => {
+      const option = document.createElement("option");
+      option.value = currency;
+      option.textContent = currency;
+      return option;
+    }));
+    commentCurrencyBase = base;
+  }
+  commentCurrencyInput.value = available.includes(previous) ? previous : available.includes("$") ? "$" : available[0];
+}
+
 function recalculate() {
   let subtotal = 0;
   for (const row of items.rows) {
@@ -130,6 +151,8 @@ function recalculate() {
     label.textContent = currencyInput.value;
   });
   updateDiscountMode();
+  updateCommentCurrencies();
+  return Number.isSafeInteger(total) ? total / 100 : 0;
 }
 
 function addItem(focus = true, data = null) {
@@ -192,6 +215,7 @@ function saveDraft() {
   const data = {
     version: 1,
     discountMode,
+    commentCurrency: commentCurrencyInput.value,
     fields: Object.fromEntries(Object.entries(draftFields).map(([key, field]) => [key, field.value])),
     items: Array.from(items.rows, (row) => Object.fromEntries(
       ["name", "quantity", "unit", "price"].map((key) => [key, row.querySelector(`[data-field="${key}"]`).value])
@@ -203,6 +227,11 @@ function saveDraft() {
   } catch {
     document.querySelector("#draft-status").textContent = "Не удалось сохранить черновик в браузере. Сохраните PDF или скопируйте смету перед закрытием.";
   }
+}
+
+function cleanLegacyComment(value) {
+  const generatedLine = /^На \d{2}\.\d{2}\.\d{4} сумма в (?:тенге|российских рублях|долларах США|евро) выходит [\d .,\u00a0\u202f]+ [₸₽$€] по курсу [^\r\n]+ на \d{2}\.\d{2}\.\d{4}\.$/;
+  return value.split(/\r?\n/).filter((line) => !generatedLine.test(line)).join("\n");
 }
 
 function restoreDraft() {
@@ -219,7 +248,10 @@ function restoreDraft() {
     if (!valid) throw new Error("Invalid draft");
     // Старые черновики без режима скидки по-прежнему используют проценты.
     discountMode = data.discountMode === "fixed" ? "fixed" : "percent";
-    for (const [key, field] of Object.entries(draftFields)) field.value = data.fields[key];
+    commentCurrencyInput.value = ["₸", "₽", "$", "€"].includes(data.commentCurrency) ? data.commentCurrency : "$";
+    for (const [key, field] of Object.entries(draftFields)) {
+      field.value = key === "comment" ? cleanLegacyComment(data.fields[key]) : data.fields[key];
+    }
     validateDigits(draftFields.number);
     validateDigits(discountInput);
     validateDigits(vatInput);
@@ -271,6 +303,8 @@ document.querySelector("#new-estimate").addEventListener("click", () => {
   validateDigits(discountInput);
   validateDigits(vatInput);
   currencyInput.value = "₸";
+  commentCurrencyInput.value = "$";
+  document.querySelector("#comment-status").textContent = "";
   items.replaceChildren();
   document.querySelectorAll(".print-value").forEach((value) => value.remove());
   document.querySelector("#print-heading").textContent = "";
@@ -278,6 +312,104 @@ document.querySelector("#new-estimate").addEventListener("click", () => {
   addItem();
   draftReady = true;
   saveDraft();
+});
+
+function loadReferenceRates() {
+  if (referenceRequest) return referenceRequest;
+  referenceRequest = (async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      // Публичный источник; содержимое сметы не передаётся.
+      const response = await fetch("https://back.halykbank.kz/common/currency-history", {
+        mode: "cors", credentials: "omit", referrerPolicy: "no-referrer", signal: controller.signal,
+      });
+      if (!response.ok) throw new Error("Unavailable");
+      const data = await response.json();
+      const history = data?.data?.currencyHistory;
+      if (data?.result !== true || !history || typeof history !== "object") throw new Error("Invalid response");
+      const records = Object.values(history).filter((record) => record && /^\d{4}-\d{2}-\d{2}$/.test(record.date));
+      records.sort((a, b) => b.date.localeCompare(a.date));
+      const latest = records[0];
+      if (!latest) throw new Error("Empty response");
+      const [year, month, day] = latest.date.split("-").map(Number);
+      const date = new Date(year, month - 1, day);
+      if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) throw new Error("Invalid date");
+      const rates = { "₸": 1 };
+      for (const [code, symbol] of Object.entries({ USD: "$", EUR: "€", RUB: "₽" })) {
+        const value = latest.privatePersons?.[`${code}/KZT`]?.sell;
+        if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) throw new Error("Invalid value");
+        rates[symbol] = value;
+      }
+      referenceRates = rates;
+      referenceDate = latest.date.split("-").reverse().join(".");
+      return true;
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timeout);
+      referenceRequest = null;
+    }
+  })();
+  return referenceRequest;
+}
+
+function replaceConversionComment(value, replacement) {
+  const generatedLine = /^На \d{2}\.\d{2}\.\d{4} сумма в (?:тенге|российских рублях|долларах США|евро) составляет [\d .,\u00a0\u202f]+ [₸₽$€](?: \(данные от \d{2}\.\d{2}\.\d{4}\))?\.$/;
+  let replaced = false;
+  const lines = [];
+  for (const line of value.split("\n")) {
+    if (generatedLine.test(line.replace(/\r$/, ""))) {
+      if (!replaced) lines.push(replacement + (line.endsWith("\r") ? "\r" : ""));
+      replaced = true;
+    } else {
+      lines.push(line);
+    }
+  }
+  if (replaced) return lines.join("\n");
+  return `${value}${value && !value.endsWith("\n") ? "\n" : ""}${replacement}`;
+}
+
+document.querySelector("#convert-comment").addEventListener("click", async () => {
+  const from = currencyInput.value;
+  const to = commentCurrencyInput.value;
+  const status = document.querySelector("#comment-status");
+  if (from === to) {
+    status.textContent = "";
+    return;
+  }
+  const button = document.querySelector("#convert-comment");
+  button.disabled = true;
+  status.textContent = "";
+  try {
+    if (from !== to && !referenceRates) {
+      status.textContent = "Подготовка пересчёта…";
+      if (!await loadReferenceRates()) {
+        status.textContent = "Не удалось выполнить пересчёт. Проверьте интернет и попробуйте снова.";
+        return;
+      }
+    }
+    if (from !== currencyInput.value || to !== commentCurrencyInput.value) {
+      status.textContent = "Валюта изменилась. Нажмите кнопку ещё раз.";
+      return;
+    }
+    const converted = recalculate() * (from === to ? 1 : referenceRates[from] / referenceRates[to]);
+    if (!Number.isFinite(converted) || converted > Number.MAX_SAFE_INTEGER / 100) {
+      status.textContent = "Слишком большая сумма для пересчёта.";
+      return;
+    }
+    const names = { "₸": "тенге", "₽": "российских рублях", "$": "долларах США", "€": "евро" };
+    const today = todayDate().split("-").reverse().join(".");
+    const amount = moneyFormatter.format(toCents(converted) / 100).replace(/[\u00a0\u202f]/g, " ");
+    const line = `На ${today} сумма в ${names[to]} составляет ${amount} ${to}${from !== to ? ` (данные от ${referenceDate})` : ""}.`;
+    const comment = draftFields.comment;
+    comment.value = replaceConversionComment(comment.value, line);
+    status.textContent = "";
+    comment.focus();
+    saveDraft();
+  } finally {
+    button.disabled = false;
+  }
 });
 
 function buildShareText() {
@@ -347,3 +479,7 @@ document.querySelector("#save-pdf").addEventListener("click", () => {
   preparePrint();
   window.print();
 });
+
+loadReferenceRates();
+
+

@@ -51,9 +51,8 @@
           <div><input id="discount" type="text" inputmode="decimal" value="0" autocomplete="off" spellcheck="false"></div>
         </div>
         <label><span class="settings-heading">НДС, %</span><input id="vat" type="text" inputmode="decimal" value="16" autocomplete="off" spellcheck="false"></label>
-        <label><span class="settings-heading">Валюта</span><select id="currency" aria-describedby="currency-hint"><option value="₸">₸</option><option value="₽">₽</option><option value="$">$</option><option value="€">€</option></select></label>
+        <label><span class="settings-heading">Валюта</span><select id="currency"><option value="₸">₸</option><option value="₽">₽</option><option value="$">$</option><option value="€">€</option></select></label>
       </div>
-      <p id="currency-hint" class="keyboard-hint">Выбор валюты меняет знак, без пересчёта по курсу.</p>
     </section>
 
     <section class="total-card" aria-labelledby="total-heading" aria-live="polite" aria-atomic="true">
@@ -66,6 +65,11 @@
 
     <section class="card comment-card" aria-labelledby="comment-heading">
       <h2 id="comment-heading">Комментарий</h2>
+      <div class="comment-conversion screen-only">
+        <label>Пересчитать в<select id="comment-currency"><option value="₽">₽</option><option value="$" selected>$</option><option value="€">€</option></select></label>
+        <button type="button" id="convert-comment" class="secondary-button">Пересчитать в комментарий</button>
+      </div>
+      <p id="comment-status" class="keyboard-hint screen-only" role="status"></p>
       <label for="comment" class="comment-label">Сроки, условия оплаты</label>
       <textarea id="comment" name="comment" rows="4" placeholder="Например, срок выполнения — 5 рабочих дней, предоплата — 50%"></textarea>
     </section>
