@@ -43,9 +43,15 @@
         <p class="keyboard-hint">Enter в последней строке добавит новую позицию.</p>
       </div>
       <div class="calculation-settings" id="calculation-settings">
-        <label>Скидка, %<input id="discount" type="text" inputmode="decimal" value="0" autocomplete="off" spellcheck="false"></label>
-        <label>НДС, %<input id="vat" type="text" inputmode="decimal" value="16" autocomplete="off" spellcheck="false"></label>
-        <label>Валюта<select id="currency" aria-describedby="currency-hint"><option value="₸">₸</option><option value="₽">₽</option><option value="$">$</option><option value="€">€</option></select></label>
+        <div class="discount-setting">
+          <div class="discount-heading">
+            <label for="discount">Скидка</label>
+            <select id="discount-mode" aria-label="Тип скидки"><option value="percent">%</option><option value="fixed" id="discount-fixed-option">₸</option></select>
+          </div>
+          <div><input id="discount" type="text" inputmode="decimal" value="0" autocomplete="off" spellcheck="false"></div>
+        </div>
+        <label><span class="settings-heading">НДС, %</span><input id="vat" type="text" inputmode="decimal" value="16" autocomplete="off" spellcheck="false"></label>
+        <label><span class="settings-heading">Валюта</span><select id="currency" aria-describedby="currency-hint"><option value="₸">₸</option><option value="₽">₽</option><option value="$">$</option><option value="€">€</option></select></label>
       </div>
       <p id="currency-hint" class="keyboard-hint">Выбор валюты меняет знак, без пересчёта по курсу.</p>
     </section>

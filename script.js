@@ -19,6 +19,7 @@ const draftFields = {
 };
 let draftReady = false;
 let copyTimer;
+let discountMode = "percent";
 let validationId = 0;
 const digitSelector = '[name="estimate-number"], [data-field="quantity"], [data-field="price"], #discount, #vat';
 
@@ -92,6 +93,13 @@ function formatMoney(value) {
   return `${moneyFormatter.format(value).replace(/[\u00a0\u202f]/g, " ")} ${currencyInput.value}`;
 }
 
+function updateDiscountMode() {
+  const fixed = discountMode === "fixed";
+  document.querySelector("#discount-mode").value = discountMode;
+  document.querySelector("#discount-fixed-option").textContent = currencyInput.value;
+  discountInput.setAttribute("aria-label", `Скидка, ${fixed ? currencyInput.value : "%"}`);
+}
+
 function recalculate() {
   let subtotal = 0;
   for (const row of items.rows) {
@@ -104,8 +112,10 @@ function recalculate() {
     subtotal += safeAmount;
   }
   if (!Number.isSafeInteger(subtotal)) subtotal = 0;
-  const discountRate = Math.min(100, parseNumber(discountInput.value));
-  const discount = Math.round(subtotal * (discountRate / 100));
+  const discountValue = parseNumber(discountInput.value);
+  const discount = discountMode === "fixed"
+    ? Math.min(subtotal, toCents(discountValue))
+    : Math.round(subtotal * (Math.min(100, discountValue) / 100));
   const discounted = subtotal - discount;
   const vat = Math.round(discounted * (parseNumber(vatInput.value) / 100));
   const safeVat = Number.isSafeInteger(vat) ? vat : 0;
@@ -119,6 +129,7 @@ function recalculate() {
   document.querySelectorAll("[data-currency]").forEach((label) => {
     label.textContent = currencyInput.value;
   });
+  updateDiscountMode();
 }
 
 function addItem(focus = true, data = null) {
@@ -144,6 +155,13 @@ document.querySelector("#add-item").addEventListener("click", () => addItem());
 items.addEventListener("input", recalculate);
 document.querySelector("#calculation-settings").addEventListener("input", recalculate);
 currencyInput.addEventListener("change", recalculate);
+for (const type of ["input", "change"]) {
+  document.querySelector("#discount-mode").addEventListener(type, (event) => {
+    discountMode = event.target.value === "fixed" ? "fixed" : "percent";
+    recalculate();
+    saveDraft();
+  });
+}
 items.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" || event.isComposing || event.repeat) return;
   const row = event.target.closest("tr");
@@ -173,6 +191,7 @@ function saveDraft() {
   if (!draftReady) return;
   const data = {
     version: 1,
+    discountMode,
     fields: Object.fromEntries(Object.entries(draftFields).map(([key, field]) => [key, field.value])),
     items: Array.from(items.rows, (row) => Object.fromEntries(
       ["name", "quantity", "unit", "price"].map((key) => [key, row.querySelector(`[data-field="${key}"]`).value])
@@ -198,6 +217,8 @@ function restoreDraft() {
         ["name", "quantity", "unit", "price"].every((key) => typeof row[key] === "string") &&
         ["шт", "час", "услуга"].includes(row.unit));
     if (!valid) throw new Error("Invalid draft");
+    // Старые черновики без режима скидки по-прежнему используют проценты.
+    discountMode = data.discountMode === "fixed" ? "fixed" : "percent";
     for (const [key, field] of Object.entries(draftFields)) field.value = data.fields[key];
     validateDigits(draftFields.number);
     validateDigits(discountInput);
@@ -245,6 +266,7 @@ document.querySelector("#new-estimate").addEventListener("click", () => {
   validateDigits(draftFields.number);
   draftFields.date.value = todayDate();
   discountInput.value = "0";
+  discountMode = "percent";
   vatInput.value = "16";
   validateDigits(discountInput);
   validateDigits(vatInput);
