@@ -21,7 +21,7 @@
       <div class="details-grid">
         <label>От кого<input type="text" name="sender" placeholder="Ваше имя или компания"></label>
         <label>Для кого<input type="text" name="recipient" placeholder="Имя или компания клиента"></label>
-        <label>Номер сметы<input type="text" name="estimate-number" placeholder="Например, 001"></label>
+        <label>Номер сметы<input type="text" name="estimate-number" inputmode="numeric" placeholder="Например, 001"></label>
         <label>Дата<input type="date" name="estimate-date" id="estimate-date"></label>
       </div>
     </section>
@@ -44,7 +44,7 @@
       </div>
       <div class="calculation-settings" id="calculation-settings">
         <label>Скидка, %<input id="discount" type="text" inputmode="decimal" value="0" autocomplete="off" spellcheck="false"></label>
-        <label>НДС, %<input id="vat" type="text" inputmode="decimal" value="0" autocomplete="off" spellcheck="false"></label>
+        <label>НДС, %<input id="vat" type="text" inputmode="decimal" value="16" autocomplete="off" spellcheck="false"></label>
         <label>Валюта<select id="currency" aria-describedby="currency-hint"><option value="₸">₸</option><option value="₽">₽</option><option value="$">$</option><option value="€">€</option></select></label>
       </div>
       <p id="currency-hint" class="keyboard-hint">Выбор валюты меняет знак, без пересчёта по курсу.</p>

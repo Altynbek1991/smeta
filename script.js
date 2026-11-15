@@ -19,17 +19,73 @@ const draftFields = {
 };
 let draftReady = false;
 let copyTimer;
+let validationId = 0;
+const digitSelector = '[name="estimate-number"], [data-field="quantity"], [data-field="price"], #discount, #vat';
+
+function validateDigits(field) {
+  const error = field.parentElement.querySelector(".field-error");
+  const isEstimateNumber = field === draftFields.number;
+  // Завершающий разделитель разрешён, чтобы можно было набрать 12,34 по символам.
+  const pattern = isEstimateNumber ? /^\d*$/ : /^\d*(?:[.,]\d*)?$/;
+  const invalid = !pattern.test(field.value);
+  if (invalid) field.value = "";
+  field.setAttribute("aria-invalid", String(invalid));
+  error.textContent = invalid ? error.dataset.message : "";
+  error.hidden = !invalid;
+}
+
+function setupDigitValidation(field, message) {
+  const error = document.createElement("span");
+  error.className = "field-error";
+  error.id = `field-error-${++validationId}`;
+  error.dataset.message = message;
+  error.hidden = true;
+  error.setAttribute("aria-live", "polite");
+  field.setAttribute("aria-describedby", error.id);
+  field.parentElement.append(error);
+  validateDigits(field);
+}
+
+function normalizeDecimalField(field) {
+  if (field !== draftFields.number && field.value !== "" && field.getAttribute("aria-invalid") !== "true") {
+    field.value = parseNumber(field.value).toFixed(2).replace(".", ",");
+  }
+}
+
+setupDigitValidation(draftFields.number, "Номер сметы можно применять только цифры");
+setupDigitValidation(discountInput, "В скидке можно применять только цифры и одну точку или запятую");
+setupDigitValidation(vatInput, "В НДС можно применять только цифры и одну точку или запятую");
+// Проверяем до пересчёта и автосохранения, включая вставку текста.
+for (const type of ["input", "change"]) {
+  document.querySelector(".app").addEventListener(type, (event) => {
+    if (event.target.matches(digitSelector)) {
+      validateDigits(event.target);
+      if (type === "change") {
+        normalizeDecimalField(event.target);
+        recalculate();
+      }
+    }
+  }, true);
+}
 const moneyFormatter = new Intl.NumberFormat("ru-RU", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 });
+
+function toCents(value) {
+  if (!Number.isFinite(value) || value < 0) return 0;
+  // Сдвиг десятичного разряда: 1,005 округляется до 1,01.
+  const [digits, exponent = "0"] = String(value).split("e");
+  const cents = Math.round(Number(`${digits}e${Number(exponent) + 2}`));
+  return Number.isSafeInteger(cents) ? cents : 0;
+}
 
 function parseNumber(value) {
   const text = value.trim().replace(/[\u00a0\u202f]/g, " ");
   // Принимаем десятичную запятую и пробелы в группах тысяч.
-  if (!/^(?:\d+|\d{1,3}(?: \d{3})+)(?:[.,]\d+)?$/.test(text)) return 0;
+  if (!/^(?:(?:\d+|\d{1,3}(?: \d{3})+)(?:[.,]\d*)?|[.,]\d+)$/.test(text)) return 0;
   const number = Number(text.replace(/ /g, "").replace(",", "."));
-  return Number.isFinite(number) && number >= 0 ? number : 0;
+  return toCents(number) / 100;
 }
 
 function formatMoney(value) {
@@ -41,10 +97,10 @@ function recalculate() {
   for (const row of items.rows) {
     const quantity = parseNumber(row.querySelector('[data-field="quantity"]').value);
     const price = parseNumber(row.querySelector('[data-field="price"]').value);
-    const amount = Math.round(quantity * price);
+    const amount = toCents(quantity * price);
     // Не допускаем бесконечность и потерю точности при чрезмерных числах.
     const safeAmount = Number.isSafeInteger(amount) ? amount : 0;
-    row.querySelector('[data-field="amount"]').textContent = formatMoney(safeAmount);
+    row.querySelector('[data-field="amount"]').textContent = formatMoney(safeAmount / 100);
     subtotal += safeAmount;
   }
   if (!Number.isSafeInteger(subtotal)) subtotal = 0;
@@ -53,13 +109,13 @@ function recalculate() {
   const discounted = subtotal - discount;
   const vat = Math.round(discounted * (parseNumber(vatInput.value) / 100));
   const safeVat = Number.isSafeInteger(vat) ? vat : 0;
-  document.querySelector("#subtotal").textContent = formatMoney(subtotal);
+  document.querySelector("#subtotal").textContent = formatMoney(subtotal / 100);
   for (const [id, amount] of [["discount", discount], ["discounted", discounted], ["vat", safeVat]]) {
-    document.querySelector(`#${id}-amount`).textContent = formatMoney(amount);
+    document.querySelector(`#${id}-amount`).textContent = formatMoney(amount / 100);
     document.querySelector(`#${id}-row`).hidden = amount === 0;
   }
   const total = discounted + safeVat;
-  totalOutput.textContent = formatMoney(Number.isSafeInteger(total) ? total : 0);
+  totalOutput.textContent = formatMoney(Number.isSafeInteger(total) ? total / 100 : 0);
   document.querySelectorAll("[data-currency]").forEach((label) => {
     label.textContent = currencyInput.value;
   });
@@ -71,6 +127,12 @@ function addItem(focus = true, data = null) {
     for (const key of ["name", "quantity", "unit", "price"]) {
       row.querySelector(`[data-field="${key}"]`).value = data[key];
     }
+  }
+  setupDigitValidation(row.querySelector('[data-field="quantity"]'), "В количестве можно применять только цифры и одну точку или запятую");
+  setupDigitValidation(row.querySelector('[data-field="price"]'), "В цене можно применять только цифры и одну точку или запятую");
+  if (data) {
+    normalizeDecimalField(row.querySelector('[data-field="quantity"]'));
+    normalizeDecimalField(row.querySelector('[data-field="price"]'));
   }
   items.append(row);
   if (focus) row.querySelector('[data-field="name"]').focus();
@@ -137,6 +199,11 @@ function restoreDraft() {
         ["шт", "час", "услуга"].includes(row.unit));
     if (!valid) throw new Error("Invalid draft");
     for (const [key, field] of Object.entries(draftFields)) field.value = data.fields[key];
+    validateDigits(draftFields.number);
+    validateDigits(discountInput);
+    validateDigits(vatInput);
+    normalizeDecimalField(discountInput);
+    normalizeDecimalField(vatInput);
     data.items.forEach((row) => addItem(false, row));
     recalculate();
     return true;
@@ -147,8 +214,10 @@ function restoreDraft() {
 }
 
 draftFields.date.value = todayDate();
-if (!restoreDraft()) addItem(false);
+const restoredDraft = restoreDraft();
+if (!restoredDraft) addItem(false);
 draftReady = true;
+if (restoredDraft) saveDraft();
 document.querySelector(".app").addEventListener("input", (event) => {
   if (event.target.matches("input, select, textarea") && event.target.id !== "copy-text") saveDraft();
 });
@@ -173,9 +242,12 @@ document.querySelector("#new-estimate").addEventListener("click", () => {
   draftReady = false;
   Object.values(draftFields).forEach((field) => { field.value = ""; });
   draftFields.number.value = nextNumber;
+  validateDigits(draftFields.number);
   draftFields.date.value = todayDate();
   discountInput.value = "0";
-  vatInput.value = "0";
+  vatInput.value = "16";
+  validateDigits(discountInput);
+  validateDigits(vatInput);
   currencyInput.value = "₸";
   items.replaceChildren();
   document.querySelectorAll(".print-value").forEach((value) => value.remove());
@@ -193,7 +265,7 @@ function buildShareText() {
   if (draftFields.sender.value.trim()) lines.push(`От кого: ${draftFields.sender.value.trim()}`);
   if (draftFields.recipient.value.trim()) lines.push(`Для кого: ${draftFields.recipient.value.trim()}`);
   lines.push("");
-  const quantityFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 20 });
+  const quantityFormatter = moneyFormatter;
   for (const row of items.rows) {
     const value = (key) => row.querySelector(`[data-field="${key}"]`).value;
     const quantity = quantityFormatter.format(parseNumber(value("quantity"))).replace(/[\u00a0\u202f]/g, " ");
@@ -235,8 +307,7 @@ function preparePrint() {
     const value = document.createElement("span");
     value.className = "print-value";
     if (field.matches('[data-field="quantity"], [data-field="price"]')) {
-      value.textContent = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 20 })
-        .format(parseNumber(field.value)).replace(/[\u00a0\u202f]/g, " ");
+      value.textContent = moneyFormatter.format(parseNumber(field.value)).replace(/[\u00a0\u202f]/g, " ");
     } else if (field.type === "date" && field.value) {
       value.textContent = field.value.split("-").reverse().join(".");
     } else {
