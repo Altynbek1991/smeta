@@ -62,6 +62,14 @@ th:last-child, td:last-child { padding-right: 0; }
 textarea { display: block; resize: vertical; line-height: 1.5; }
 .save-button { border: 1px solid var(--accent); border-radius: 8px; padding: 12px 22px; background: var(--accent); color: white; font-weight: 650; }
 .save-button:hover { background: #105d40; }
+.print-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.print-actions .keyboard-hint { flex-basis: 100%; margin-top: 0; }
+.secondary-button { border: 1px solid #cbd7cf; border-radius: 8px; padding: 12px 18px; background: white; color: #22332d; font-weight: 600; }
+.secondary-button:hover { background: #edf2ef; }
+#copy-status { color: var(--accent); font-size: 14px; }
+#copy-fallback { margin-top: 20px; }
+#copy-text { margin-top: 12px; }
+[hidden] { display: none !important; }
 
 @media screen and (min-width: 641px) and (max-width: 850px) {
   .app { padding-right: 16px; padding-left: 16px; }
@@ -95,6 +103,7 @@ textarea { display: block; resize: vertical; line-height: 1.5; }
   .total-card { padding: 24px 20px; align-items: flex-start; flex-direction: column; gap: 12px; }
   .final-total { flex-direction: column; gap: 12px; }
   .save-button { width: 100%; }
+  .print-actions > button { width: 100%; }
 }
 
 @page { size: A4 portrait; margin: 15mm; }
@@ -103,7 +112,7 @@ textarea { display: block; resize: vertical; line-height: 1.5; }
   :root, body { background: white; color: black; }
   body { font-size: 11pt; line-height: 1.4; }
   .app { max-width: none; margin: 0; padding: 0; }
-  .page-header, button, .add-area, .print-actions, .calculation-settings,
+  .page-header, button, .add-area, .print-actions, .calculation-settings, .screen-only,
   #currency-hint, .delete-cell, th:last-child, .muted, .comment-label,
   .mobile-only, input, select, textarea { display: none !important; }
   .print-only { display: block; }
