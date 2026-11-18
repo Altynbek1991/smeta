@@ -11,16 +11,16 @@
   <main class="app">
     <h1 id="print-heading" class="print-only"></h1>
     <header class="page-header">
-      <span class="eyebrow">ПРОСТОЙ РАСЧЁТ</span>
-      <h1>Смета за 5 минут</h1>
-      <p>Добавьте позиции и цены — смета посчитает всё сама.</p>
+      <span class="eyebrow">СОСТАВЛЕНИЕ СМЕТЫ</span>
+      <h1>Смета</h1>
+      <p>Заполните реквизиты, укажите позиции и стоимость.</p>
     </header>
 
     <section class="card" aria-labelledby="details-heading">
-      <h2 id="details-heading">Реквизиты</h2>
+      <h2 id="details-heading">Реквизиты сметы</h2>
       <div class="details-grid">
-        <label>От кого<input type="text" name="sender" placeholder="Ваше имя или компания"></label>
-        <label>Для кого<input type="text" name="recipient" placeholder="Имя или компания клиента"></label>
+        <label>Исполнитель<input type="text" name="sender" placeholder="Имя или название компании"></label>
+        <label>Заказчик<input type="text" name="recipient" placeholder="Имя или название компании"></label>
         <label>Номер сметы<input type="text" name="estimate-number" inputmode="numeric" placeholder="Например, 001"></label>
         <label>Дата<input type="date" name="estimate-date" id="estimate-date"></label>
       </div>
@@ -28,13 +28,13 @@
 
     <section class="card positions" aria-labelledby="positions-heading">
       <div class="section-heading">
-        <h2 id="positions-heading">Позиции</h2>
+        <h2 id="positions-heading">Состав сметы</h2>
         <span class="muted">Валюта: <span data-currency>₸</span></span>
       </div>
       <table>
         <caption class="sr-only">Позиции сметы: количество, цена и сумма</caption>
         <thead>
-          <tr><th scope="col">Наименование</th><th scope="col">Количество</th><th scope="col">Единица</th><th scope="col">Цена, <span data-currency>₸</span></th><th scope="col" class="amount-heading">Сумма</th><th scope="col"><span class="sr-only">Удаление</span></th></tr>
+          <tr><th scope="col">Наименование</th><th scope="col">Кол-во</th><th scope="col">Ед. изм.</th><th scope="col">Цена, <span data-currency>₸</span></th><th scope="col" class="amount-heading">Сумма</th><th scope="col"><span class="sr-only">Удаление</span></th></tr>
         </thead>
         <tbody id="items"></tbody>
       </table>
@@ -64,13 +64,13 @@
     </section>
 
     <section class="card comment-card" aria-labelledby="comment-heading">
-      <h2 id="comment-heading">Комментарий</h2>
+      <h2 id="comment-heading">Условия и примечания</h2>
       <div class="comment-conversion screen-only">
-        <label>Пересчитать в<select id="comment-currency"><option value="₽">₽</option><option value="$" selected>$</option><option value="€">€</option></select></label>
-        <button type="button" id="convert-comment" class="secondary-button">Пересчитать в комментарий</button>
+        <label>Валюта пересчёта<select id="comment-currency"><option value="₽">₽</option><option value="$" selected>$</option><option value="€">€</option></select></label>
+        <button type="button" id="convert-comment" class="secondary-button">Добавить пересчёт в примечание</button>
       </div>
       <p id="comment-status" class="keyboard-hint screen-only" role="status"></p>
-      <label for="comment" class="comment-label">Сроки, условия оплаты</label>
+      <label for="comment" class="comment-label">Сроки, условия оплаты и дополнительные сведения</label>
       <textarea id="comment" name="comment" rows="4" placeholder="Например, срок выполнения — 5 рабочих дней, предоплата — 50%"></textarea>
     </section>
     <p class="print-only signature">Подпись ____________________</p>
